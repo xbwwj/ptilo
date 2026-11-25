@@ -1,9 +1,4 @@
 # ptilo
 
-A lightweigh alternative for MLIR and pliron.
+A small MLIR-like IR core, not a framework.
 
-## Philosophy
-
-- IR is untyped, don't fake to have it
-- No one need custom format, use abbrv convention instead
-- Transforms should work on traits, if you want to share them
