@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fmt::Write as _;
 
 use crate::attr::{Attr, AttrDict};
+use crate::error::{Error, Result};
 use crate::ir::{BlockId, Context, OpId, RegionId, Value};
 use crate::types::{Signedness, TypeArg, TypeId};
-use crate::{Error, Result};
 
 /// Render the context in MLIR generic form.
 ///

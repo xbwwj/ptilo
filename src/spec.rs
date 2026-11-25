@@ -2,6 +2,7 @@
 
 use crate::Result;
 use crate::attr::Attr;
+use crate::error::Error;
 use crate::ir::{Context, OpId, Operation};
 
 #[derive(Debug, Clone, Copy)]
@@ -41,7 +42,7 @@ impl OpSpec {
 
     pub fn check_builder(&self, ctx: &Context, op: &Operation) -> Result<()> {
         if !self.operand_count_ok(op.operands.len()) {
-            return Err(crate::Error::new(format!(
+            return Err(Error::new(format!(
                 "{} expects {} operands, found {}",
                 self.name,
                 describe_arity(
@@ -52,7 +53,7 @@ impl OpSpec {
             )));
         }
         if !self.result_count_ok(op.results.len()) {
-            return Err(crate::Error::new(format!(
+            return Err(Error::new(format!(
                 "{} expects {} results, found {}",
                 self.name,
                 describe_arity(
@@ -67,14 +68,14 @@ impl OpSpec {
             match key.and_then(|key| op.attrs.get(key)) {
                 Some(attr) => {
                     if !spec.constraint.matches(attr) {
-                        return Err(crate::Error::new(format!(
+                        return Err(Error::new(format!(
                             "{} attribute {:?} has the wrong shape",
                             self.name, spec.name
                         )));
                     }
                 }
                 None if spec.required => {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "{} is missing required attribute {:?}",
                         self.name, spec.name
                     )));
@@ -94,7 +95,7 @@ impl OpSpec {
             } else {
                 format!("{required}..={}", self.regions.len())
             };
-            return Err(crate::Error::new(format!(
+            return Err(Error::new(format!(
                 "{} expects {expected} regions, found {}",
                 self.name,
                 op.regions.len()

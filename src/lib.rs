@@ -3,6 +3,7 @@
 pub mod algorithms;
 pub mod arena;
 pub mod attr;
+pub mod error;
 pub mod ir;
 pub mod spec;
 pub mod symbol;
@@ -21,32 +22,10 @@ pub use spec::{
 };
 pub use symbol::Symbol;
 pub use text::print;
+
 pub use types::{Signedness, TypeArg, TypeId, TypeNode};
 
-use std::fmt;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Error {
-    pub message: String,
-}
-
-impl Error {
-    pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-        }
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for Error {}
-
-pub type Result<T> = std::result::Result<T, Error>;
+use crate::error::Result;
 
 impl Context {
     /// Parse MLIR generic-form text into a fresh IR.

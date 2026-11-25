@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use crate::attr::{Attr, AttrDict};
+use crate::error::{Error, Result};
 use crate::ir::{BlockId, Context, Operation, RegionId, Value};
 use crate::text::lex::{Spanned, Tok, lex};
 use crate::types::{Signedness, TypeArg, TypeId, TypeNode};
-use crate::{Error, Result};
 
 pub fn parse(text: &str) -> Result<Context> {
     let mut ctx = Context::new();

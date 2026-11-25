@@ -2,6 +2,7 @@
 
 use crate::arena::{Arena, Id};
 use crate::attr::{Attr, AttrDict};
+use crate::error::Error;
 use crate::spec::OpSpec;
 use crate::symbol::{Symbol, SymbolTable};
 use crate::types::{Signedness, TypeArg, TypeId, TypeInterner, TypeNode};
@@ -571,13 +572,13 @@ impl Context {
     fn verify_structure(&self) -> crate::Result<()> {
         for (block_id, block) in self.iter_blocks() {
             let Some(region) = self.try_region(block.parent) else {
-                return Err(crate::Error::new(format!(
+                return Err(Error::new(format!(
                     "block {block_id:?} points at a dangling region {:?}",
                     block.parent
                 )));
             };
             if !region.blocks.contains(&block_id) {
-                return Err(crate::Error::new(format!(
+                return Err(Error::new(format!(
                     "block {block_id:?} is not listed by its region {:?}",
                     block.parent
                 )));
@@ -587,12 +588,12 @@ impl Context {
             }
             for op_id in &block.ops {
                 let Some(op) = self.try_op(*op_id) else {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "block {block_id:?} holds a dangling operation {op_id:?}"
                     )));
                 };
                 if op.parent != Some(block_id) {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "operation {op_id:?} sits in block {block_id:?} but its parent is {:?}",
                         op.parent
                     )));
@@ -603,12 +604,12 @@ impl Context {
         for (region_id, region) in self.iter_regions() {
             for block_id in &region.blocks {
                 let Some(block) = self.try_block(*block_id) else {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "region {region_id:?} holds a dangling block {block_id:?}"
                     )));
                 };
                 if block.parent != region_id {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "block {block_id:?} sits in region {region_id:?} but its parent is {:?}",
                         block.parent
                     )));
@@ -619,7 +620,7 @@ impl Context {
                     .try_op(parent)
                     .is_none_or(|op| !op.regions.contains(&region_id))
             {
-                return Err(crate::Error::new(format!(
+                return Err(Error::new(format!(
                     "region {region_id:?} is not listed by its parent operation {parent:?}"
                 )));
             }
@@ -628,18 +629,18 @@ impl Context {
         for (op_id, op) in self.iter_ops() {
             if let Some(block) = op.parent {
                 let Some(data) = self.try_block(block) else {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "operation {op_id:?} points at a dangling block {block:?}"
                     )));
                 };
                 if !data.ops.contains(&op_id) {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "operation {op_id:?} claims block {block:?} but is not listed there"
                     )));
                 }
             }
             if op.parent.is_none() && !self.roots.contains(&op_id) {
-                return Err(crate::Error::new(format!(
+                return Err(Error::new(format!(
                     "operation {op_id:?} is neither in a block nor a root"
                 )));
             }
@@ -651,19 +652,19 @@ impl Context {
             }
             for operand in &op.operands {
                 if self.try_value_type(*operand).is_none() {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "operation {op_id:?} uses a dangling operand {operand:?}"
                     )));
                 }
             }
             for region_id in &op.regions {
                 let Some(region) = self.try_region(*region_id) else {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "operation {op_id:?} holds a dangling region {region_id:?}"
                     )));
                 };
                 if region.parent != Some(op_id) {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "region {region_id:?} sits in operation {op_id:?} but its parent is {:?}",
                         region.parent
                     )));
@@ -671,7 +672,7 @@ impl Context {
             }
             for block_id in &op.successors {
                 if self.try_block(*block_id).is_none() {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "operation {op_id:?} branches to a dangling block {block_id:?}"
                     )));
                 }
@@ -680,12 +681,12 @@ impl Context {
 
         for root in &self.roots {
             let Some(op) = self.try_op(*root) else {
-                return Err(crate::Error::new(format!(
+                return Err(Error::new(format!(
                     "root list holds a dangling operation {root:?}"
                 )));
             };
             if op.parent.is_some() {
-                return Err(crate::Error::new(format!(
+                return Err(Error::new(format!(
                     "root operation {root:?} has a parent block"
                 )));
             }
@@ -695,7 +696,7 @@ impl Context {
 
     fn verify_type_tree(&self, ty: TypeId) -> crate::Result<()> {
         let Some(data) = self.try_type_node(ty) else {
-            return Err(crate::Error::new(format!("dangling type {ty:?}")));
+            return Err(Error::new(format!("dangling type {ty:?}")));
         };
         for arg in &data.args {
             match arg {
@@ -714,7 +715,7 @@ impl Context {
             Attr::Int { ty, .. } => {
                 self.verify_type_tree(*ty)?;
                 if self.int_info(*ty).is_none() {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "integer attribute has non-integer type {ty:?}"
                     )));
                 }
@@ -722,7 +723,7 @@ impl Context {
             Attr::Float { ty, .. } => {
                 self.verify_type_tree(*ty)?;
                 if self.float_width(*ty).is_none() {
-                    return Err(crate::Error::new(format!(
+                    return Err(Error::new(format!(
                         "float attribute has non-float type {ty:?}"
                     )));
                 }
